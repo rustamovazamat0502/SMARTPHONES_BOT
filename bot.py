@@ -1,13 +1,11 @@
-import sqlite3
-
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import Message, CallbackQuery, LabeledPrice
-from configs import TOKEN
-from keyboards import *
-
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.types import Message, CallbackQuery, LabeledPrice
+
+from configs import TOKEN
+from keyboards import *
 
 bot = Bot(TOKEN, parse_mode="HTML")
 
@@ -32,9 +30,9 @@ async def show_users(message: Message):
     con = sqlite3.connect("smartphones.db")
     cur = con.cursor()
 
-    cur.execute("SELECT user_id FROM users")
-    admin = cur.fetchone()[0]
-    if admin == 1:
+    cur.execute("SELECT user_id, phone_number FROM users")
+    admin = cur.fetchone()[1]
+    if admin == "+998910058504" or admin == 1:
         con = sqlite3.connect("smartphones.db")
         cur = con.cursor()
 
