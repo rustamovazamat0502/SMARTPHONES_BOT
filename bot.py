@@ -1,40 +1,83 @@
-from aiogram import Bot, Dispatcher, executor
-from aiogram.types import Message, CallbackQuery, LabeledPrice
+import sqlite3
 
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import Message, CallbackQuery, LabeledPrice
 from configs import TOKEN
 from keyboards import *
 
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+
 bot = Bot(TOKEN, parse_mode="HTML")
 
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=MemoryStorage())
 
 
-@dp.message_handler(commands=['start'])
+class PhoneNumber(StatesGroup):
+    phone_number = State()
+
+
+@dp.message_handler(commands=['start', "about"])
 async def start_command(message: Message):
     chat_id = message.chat.id
-    await bot.send_message(chat_id, "Thi is a test bot for delivery !")
-    await register_user(message)
-    await show_direction(message)
+    if message.text == "/start":
+        await bot.send_message(chat_id, f"Hello {message.from_user.first_name} ! This is a test bot for delivery !", )
+        await ask_phone_number(message)
 
 
-async def register_user(message: Message):
+@dp.message_handler(lambda message: "Users" in message.text)
+async def show_users(message: Message):
+    chat_id = message.chat.id
+    con = sqlite3.connect("smartphones.db")
+    cur = con.cursor()
+
+    cur.execute("SELECT user_id FROM users")
+    admin = cur.fetchone()[0]
+    if admin == 1:
+        con = sqlite3.connect("smartphones.db")
+        cur = con.cursor()
+
+        cur.execute("""
+            SELECT user_id, full_name, telegram_id, phone_number FROM users
+        """)
+        users = cur.fetchall()
+        for user in users:
+            data = f'USER ID = {user[0]}\nFull Name = {user[1]}\nTELEGRAM ID = {user[2]}\nPhone Number = {user[3]}\n'
+            await bot.send_message(chat_id, text=data)
+    else:
+        await bot.send_message(chat_id, "You are not allowed to see the users. 🚫🚫🚫")
+
+
+async def ask_phone_number(message: Message):
+    chat_id = message.chat.id
+    await bot.send_message(chat_id, "Enter your phone Number ☎️", reply_markup=generate_pn_button())
+    await PhoneNumber.phone_number.set()
+
+
+@dp.message_handler(state=PhoneNumber.phone_number, content_types=types.ContentTypes.CONTACT)
+async def register_user(message: Message, state: FSMContext):
     chat_id = message.chat.id
     full_name = message.from_user.full_name
+    phone_number = message.contact.phone_number
+
+    print(phone_number)
 
     database = sqlite3.connect("smartphones.db")
     cursor = database.cursor()
 
     try:
         cursor.execute("""
-        INSERT INTO users(full_name, telegram_id) VALUES(?, ?);
-        """, (full_name, chat_id))
+        INSERT INTO users(full_name, telegram_id, phone_number) VALUES(?, ?, ?);
+        """, (full_name, chat_id, phone_number))
         database.commit()
         await bot.send_message(chat_id, "Registration is successful !")
     except:
         await bot.send_message(chat_id, f"Authorization is successful !")
 
     database.close()
-
+    await state.finish()
+    await show_direction(message)
     await create_cart(message)
 
 
@@ -404,6 +447,24 @@ async def create_order(call: CallbackQuery):
 async def make_order(message: Message):
     chat_id = message.chat.id
     await bot.send_message(chat_id, "Please choose from the categories: ", reply_markup=generate_category_menu())
+
+
+@dp.message_handler(lambda message: "History of orders🗒️" in message.text)
+async def history(message: Message):
+    chat_id = message.chat.id
+    conn = sqlite3.connect("smartphones.db")
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT * FROM users WHERE telegram_id = ?;
+    """, (chat_id,))
+    alls = cur.fetchall()
+    for data in alls:
+        info = f"user_id = {data[0]}\n" \
+               f"full_name = {data[1]}\n" \
+               f"telegram_id = {data[2]}" \
+               f"phone_number = {data[3]}"
+        await bot.send_message(chat_id, info)
 
 
 executor.start_polling(dp, skip_updates=True)

@@ -9,7 +9,10 @@ def create_users_table():
     CREATE TABLE IF NOT EXISTS users(
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name VARCHAR(50) NOT NULL,
-        telegram_id INTEGER NOT NULL UNIQUE
+        telegram_id INTEGER NOT NULL,
+        phone_number VARCHAR(20),
+        
+        UNIQUE(telegram_id, phone_number)
     )
     ''')
 

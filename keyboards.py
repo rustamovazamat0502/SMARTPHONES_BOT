@@ -9,8 +9,15 @@ def generate_direction():
     return ReplyKeyboardMarkup([
         [KeyboardButton(text="SmartPhones 📱"), KeyboardButton(text="🚀 Checkout")],
         [KeyboardButton(text="History of orders🗒️"), KeyboardButton(text="Cart 🛒")],
-        [KeyboardButton(text="Help 🆘"), KeyboardButton(text="About Us 🧑🏿‍💻")]
+        [KeyboardButton(text="Help 🆘"), KeyboardButton(text="About Us 🧑🏿‍💻")],
+        [KeyboardButton(text="Users")]
     ], resize_keyboard=True, one_time_keyboard=True)
+
+
+def generate_pn_button():
+    return ReplyKeyboardMarkup([
+        [KeyboardButton(text="Send phone number", request_contact=True)]
+    ], resize_keyboard=True)
 
 
 def generate_category_menu():
